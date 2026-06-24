@@ -2,16 +2,16 @@
 
 `service-cp-crime-caseingestion-enforcementgateway`
 
-A Common Platform (CP) Spring Boot service that owns the **CP → Libra/GoB outbound enforcement
-hearing interfaces** for the **Enforcement 2025** programme (Jira **CCT-1222**).
+A Common Platform (CP) Spring Boot service that owns the **outbound integration from CP to the
+Libra/GoB enforcement system for court hearings**.
 
-When an enforcement case is allocated to a court hearing (or an existing allocation is amended), this
-service confirms the hearing back to Libra (GoB):
+When an enforcement case is allocated to a court hearing — or an existing allocation is amended — this
+service keeps Libra (GoB) in sync with the confirmed hearing details:
 
-- **FR09 — hearing confirmation:** on allocation, POST a `confirmedHearing` payload
+- **Hearing confirmation:** on allocation, POST a `confirmedHearing` payload
   (`caseUrn`, `courtHearingLocation`, `dateOfHearing`, `timeOfHearing`) to Libra via APIM.
-- **FR11 — hearing updates:** on any amendment to an allocated enforcement hearing, re-POST the
-  latest `confirmedHearing` snapshot.
+- **Hearing updates:** on any amendment to an allocated enforcement hearing, re-POST the latest
+  `confirmedHearing` snapshot.
 
 It is **event-driven**: it subscribes to CP listing public events (`public.listing.hearing-confirmed`
 / `public.listing.hearing-updated`), filters to enforcement cases, enriches, maps, and calls Libra.
@@ -19,17 +19,15 @@ It is **event-driven**: it subscribes to CP listing public events (`public.listi
 > Owned by the **cp-case-ingestion-and-material** team. This service is the strangler-fig successor for
 > the CP↔Libra/GoB enforcement integration currently in the legacy WildFly context
 > `cpp-context-staging-enforcement`; that context is unchanged for now and will be migrated
-> incrementally. Distinct from **GRW** (the GOB Resulting Workstream service), which owns
-> results→GoB + NOWs.
+> incrementally. Distinct from the GOB Resulting Workstream service, which owns results→GoB + NOWs.
 
-Design: see the CCT-1222 *Listing and Hearing Confirmation Design* (Confluence `DATAIN/1985059634`).
 API contract: [`api-cp-crime-caseingestion-enforcementgateway`](https://github.com/hmcts/api-cp-crime-caseingestion-enforcementgateway).
 
 > ⚠️ **Scaffold.** Created from the HMCTS template
 > [`service-hmcts-crime-springboot-template`](https://github.com/hmcts/service-hmcts-crime-springboot-template).
 > The domain implementation (event listener, enforcement filter, Libra client) is not yet built — a
 > platform spike to confirm Boot durable subscription to the CP Artemis `public.event` topic is a
-> prerequisite (see the design doc §9).
+> prerequisite.
 
 ## Tech stack
 
@@ -66,7 +64,8 @@ GitHub Actions workflows live in `.github/workflows`:
 
 - `ci-draft.yml` — build/verify on PRs and branch pushes.
 - `ci-released.yml` — on a **published GitHub Release** (`release: [published]`), publishes the
-  artefact and triggers the Docker build/deploy via `ci-build-publish.yml`.
+  artefact and triggers the Docker build/deploy via `ci-build-publish.yml` (with a Trivy image scan
+  and a release-notes appender that records the published image coordinates).
 - `code-analysis.yml`, `codeql.yml`, `secrets-scanner.yml`, `auto-merge-dependabot.yml`.
 
 `main` and `team/*` branches are protected and require at least one approving review.
