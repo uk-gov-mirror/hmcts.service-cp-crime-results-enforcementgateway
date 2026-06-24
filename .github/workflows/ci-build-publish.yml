@@ -29,7 +29,7 @@ jobs:
   Artefact-Version:
     runs-on: ubuntu-latest
     outputs:
-      artefact_version: ${{ inputs.is_release && steps.artefact.outputs.release_version || steps.artefact.outputs.draft_version }}
+      artefact_version: ${{ steps.version.outputs.artefact_version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -43,6 +43,32 @@ jobs:
           release: ${{ inputs.is_release }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Branch-aware version resolution. Release builds keep the action's tag-derived
+      # release_version. Non-release builds avoid leaking the latest semver tag's label
+      # into every branch's image:
+      #   team/** push -> <branch-name-without-team/>-<short-sha>
+      #   main / other -> <projectVersion from gradle.properties>-<short-sha>
+      - name: Resolve artefact version
+        id: version
+        env:
+          IS_RELEASE: ${{ inputs.is_release }}
+          REF_NAME: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ steps.artefact.outputs.release_version }}
+        run: |
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          if [ "$IS_RELEASE" = "true" ]; then
+            VERSION="$RELEASE_VERSION"
+          elif [[ "$REF_NAME" == team/* ]]; then
+            BRANCH="${REF_NAME#team/}"
+            BRANCH="${BRANCH//\//-}"
+            VERSION="${BRANCH}-${SHORT_SHA}"
+          else
+            PROJECT_VERSION="$(grep -E '^projectVersion=' gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')"
+            VERSION="${PROJECT_VERSION}-${SHORT_SHA}"
+          fi
+          echo "Resolved artefact version: $VERSION"
+          echo "artefact_version=$VERSION" >> "$GITHUB_OUTPUT"
 
   Build:
     needs: [Artefact-Version]
@@ -159,6 +185,15 @@ jobs:
           build-args: |
             BASE_IMAGE=eclipse-temurin:25
             JAR_FILENAME=${{ needs.Build.outputs.artefact_name }}.jar
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:${{ needs.Artefact-Version.outputs.artefact_version }}
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
 
   Deploy:
     needs: [ Provider-Deploy, Build, Artefact-Version ]
