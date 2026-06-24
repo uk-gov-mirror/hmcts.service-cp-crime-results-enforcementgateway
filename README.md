@@ -1,153 +1,80 @@
-# HMCTS Crime Service Spring Boot Template
+# Enforcement Hearing Gateway (service)
 
-This repository provides a template for building Spring Boot applications. While the initial use case was for the HMCTS API Marketplace, the template is designed to be reusable across jurisdictions and is intended as a base paved path for wider adoption.
+`service-cp-crime-caseingestion-enforcementgateway`
 
-It includes essential configurations, dependencies, and recommended practices to help teams get started quickly.
+A Common Platform (CP) Spring Boot service that owns the **CP → Libra/GoB outbound enforcement
+hearing interfaces** for the **Enforcement 2025** programme (Jira **CCT-1222**).
 
-**Note:** This template is not a framework, nor is it intended to evolve into one. It simply leverages the Spring ecosystem and proven libraries from the wider engineering community.
+When an enforcement case is allocated to a court hearing (or an existing allocation is amended), this
+service confirms the hearing back to Libra (GoB):
 
-As HMCTS services are hosted on Azure, the included dependencies reflect this. Our aim is to stay as close to the cloud as possible in order to maximise alignment with the Shared Responsibility Model and achieve optimal security and operability.
+- **FR09 — hearing confirmation:** on allocation, POST a `confirmedHearing` payload
+  (`caseUrn`, `courtHearingLocation`, `dateOfHearing`, `timeOfHearing`) to Libra via APIM.
+- **FR11 — hearing updates:** on any amendment to an allocated enforcement hearing, re-POST the
+  latest `confirmedHearing` snapshot.
 
-## Want to Build Your Own Path?
+It is **event-driven**: it subscribes to CP listing public events (`public.listing.hearing-confirmed`
+/ `public.listing.hearing-updated`), filters to enforcement cases, enriches, maps, and calls Libra.
 
-That’s absolutely fine — but if you do, make sure your approach meets the following baseline requirements:
+> Owned by the **cp-case-ingestion-and-material** team. This service is the strangler-fig successor for
+> the CP↔Libra/GoB enforcement integration currently in the legacy WildFly context
+> `cpp-context-staging-enforcement`; that context is unchanged for now and will be migrated
+> incrementally. Distinct from **GRW** (the GOB Resulting Workstream service), which owns
+> results→GoB + NOWs.
 
-* Security – All services must meet HMCTS security standards, including vulnerability scanning and least privilege access.
-* Observability – Logs, metrics, and traces must be integrated into HMCTS observability stack (e.g. Azure Monitoring).
-* Audit – Systems must produce audit trails that meet legal and operational requirements.
-* CI/CD Integration – Pipelines must include automated testing, deployments to multiple environments, and use approved tooling (e.g. GitHub Actions or Azure DevOps).
-* Compliance & Policy Alignment – Services must align with HMCTS/MoJ policies (e.g. Coding in the Open, mandatory security practices).
-* Ownership & Support – Domain teams must clearly own the service, maintain a support model, and define escalation paths.
+Design: see the CCT-1222 *Listing and Hearing Confirmation Design* (Confluence `DATAIN/1985059634`).
+API contract: [`api-cp-crime-caseingestion-enforcementgateway`](https://github.com/hmcts/api-cp-crime-caseingestion-enforcementgateway).
 
-## Implementation Patterns & Demo Project
+> ⚠️ **Scaffold.** Created from the HMCTS template
+> [`service-hmcts-crime-springboot-template`](https://github.com/hmcts/service-hmcts-crime-springboot-template).
+> The domain implementation (event listener, enforcement filter, Libra client) is not yet built — a
+> platform spike to confirm Boot durable subscription to the CP Artemis `public.event` topic is a
+> prerequisite (see the design doc §9).
 
-This template is intentionally bare-bones. It provides the core Spring Boot scaffold — actuator, observability, logging — without any domain-specific or infrastructure patterns built in.
+## Tech stack
 
-For ready-to-use implementation guides and working code examples, see the demo project:
+- **Java 25**, **Spring Boot 4**, **Gradle**
+- Observability: Spring Boot Actuator, OpenTelemetry, Prometheus
+- Hosting: Azure (App Insights, ACR/AKS via the ADO mirror pipeline)
 
-> 🔗 **[service-hmcts-springboot-demo](https://github.com/hmcts/service-hmcts-springboot-demo)**
+## Prerequisites
 
-Each pattern lives in its own module or folder so you can browse, copy, or cherry-pick exactly what you need:
+- ☕️ **Java 25 or later** on your `PATH`
+- ⚙️ **Gradle** (the wrapper pins the version — `gradle/wrapper/gradle-wrapper.properties`)
 
-### Controllers & API
-| Demo | Branch |
-|---|---|
-| REST controller (request/response, validation, error handling) | [`controller-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/controller-demo) |
-| Exception handling | [`exception-handling-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/exception-handling-demo) |
-| API versioning | [`api-versioning-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/api-versioning-demo) |
-| OpenAPI client (calling downstream services) | [`openapi-client-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/openapi-client-demo) |
-| API tests | [`api-test-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/api-test-demo) |
-
-### Database / Persistence
-| Demo | Branch |
-|---|---|
-| JPA + PostgreSQL (Spring Boot 4) | [`postgres-springboot4`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/postgres-springboot4) |
-| Encrypted columns | [`postgres-encrypt-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/postgres-encrypt-demo) |
-| Pessimistic locking | [`postgres-lock`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/postgres-lock) |
-| Flyway Java-based migrations | [`flyway-java-migration-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/flyway-java-migration-demo) |
-
-### Messaging
-| Demo | Branch |
-|---|---|
-| Service Bus queue | [`servicebus-queue-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/servicebus-queue-demo) |
-| Service Bus topic / subscription | [`servicebus-topic-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/servicebus-topic-demo) |
-| Service Bus retry handling | [`servicebus-retry-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/servicebus-retry-demo) |
-
-### Security & Auth
-| Demo | Branch |
-|---|---|
-| JWT auth filter | [`jwt-token-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/jwt-token-demo) |
-| Auth filter | [`auth-filter-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/auth-filter-demo) |
-| Outbound HMAC auth | [`outbound-auth-hmac-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/outbound-auth-hmac-demo) |
-| Entra ID (Azure AD) | [`feature/entra-auth-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/feature/entra-auth-demo) |
-
-### Observability & Monitoring
-| Demo | Branch |
-|---|---|
-| Actuator endpoints | [`actuator-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/actuator-demo) |
-| Azure Monitor integration | [`azure-monitor-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/azure-monitor-demo) |
-| Audit filter | [`audit-filter-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/audit-filter-demo) |
-| Audit filter (Logback) | [`audit-filter-logback-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/audit-filter-logback-demo) |
-
-### Azure
-| Demo | Branch |
-|---|---|
-| Key Vault | [`azure-vault-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/azure-vault-demo) |
-| APIM integration | [`apim-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/apim-demo) |
-| Azurite (local Azure Storage) | [`azure-azureite-storage`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/azure-azureite-storage) |
-
-### Other
-| Demo | Branch |
-|---|---|
-| Clock / time abstraction (testable) | [`clock-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/clock-demo) |
-| JSON mapper patterns | [`json-mapper-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/json-mapper-demo) |
-| Gradle test configuration | [`gradle-test-demo`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/gradle-test-demo) |
-| Misc Java patterns | [`misc-java-demos`](https://github.com/hmcts/service-hmcts-springboot-demo/tree/misc-java-demos) |
-
-### Don't see the pattern you need?
-
-If you've built something useful that isn't covered above — **please add it to the demo project as an exemplar**. A new module or folder per pattern keeps things easy to discover and copy. Raise a PR against [service-hmcts-springboot-demo](https://github.com/hmcts/service-hmcts-springboot-demo) with your working example and a short README explaining the pattern.
-
----
-
-## Documentation
-
-Further documentation can be found in the [docs](docs) directory.
-
-### Key Documentation
-- [Spring Boot v4 Upgrade Guide](docs/SpringUpgradev4.md) - Details on the Spring Boot v4 upgrade, tracing test fixes, and code refactoring improvements
-- [Logging Documentation](docs/Logging.md) - Logging configuration and best practices
-- [Pipeline Documentation](docs/PIPELINE.md) - CI/CD pipeline configuration and deployment processes
-
-### Prerequisites
-
-- ☕️ **Java 25 or later**: Ensure Java is installed and available on your `PATH`.
-- ⚙️ **Gradle**: [Install Gradle](https://gradle.org/install/). The project itself defines which Gradle version to use (gradle/wraper/gradle-wrapper.properties).
-
-You can verify installation with:
 ```bash
 java -version
 gradle -v
 ```
 
-## Installation
-
-### Build
-```bash
-gradle build
-```
-
-`build` will run all tests.
-
-### Tests
-- `gradle test` for running unit and integration tests
-
-## Static code analysis
-
-Install PMD
+## Build & test
 
 ```bash
-brew install pmd
+gradle build      # compile + checks + unit/integration tests
+gradle test       # unit and integration tests only
 ```
+
+### Static analysis (PMD)
+
 ```bash
-pmd check \
-    --dir src/main/java \
-    --rulesets \
-    .github/pmd-ruleset.xml \
-    --format html \
-    -r build/reports/pmd/pmd-report.html
-```
-
-Run PMD from Gradle
-
-```
 gradle pmdTest
 ```
 
-### Contribute to This Repository
+## CI/CD
 
-Contributions are welcome! Please see the [CONTRIBUTING.md](.github/CONTRIBUTING.md) file for guidelines.
+GitHub Actions workflows live in `.github/workflows`:
+
+- `ci-draft.yml` — build/verify on PRs and branch pushes.
+- `ci-released.yml` — on a **published GitHub Release** (`release: [published]`), publishes the
+  artefact and triggers the Docker build/deploy via `ci-build-publish.yml`.
+- `code-analysis.yml`, `codeql.yml`, `secrets-scanner.yml`, `auto-merge-dependabot.yml`.
+
+`main` and `team/*` branches are protected and require at least one approving review.
+
+## Contributing
+
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md). Branch naming: `team/<topic>`.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
+MIT — see [LICENSE](LICENSE).
