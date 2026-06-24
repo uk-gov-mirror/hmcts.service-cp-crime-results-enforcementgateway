@@ -8,7 +8,7 @@ on:
 jobs:
   # NOTE: the template's `validate-api-spec-version` job (./gradlew validateApiSpecVersions)
   # was removed until this service wires its `apiSpec` dependency on
-  # api-cp-crime-caseingestion-enforcementgateway. Re-add it — apply
+  # api-cp-crime-results-enforcementgateway. Re-add it — apply
   # gradle/apispec-validation.gradle and declare an `apiSpec` configuration — once the
   # generated API client is consumed, so released builds pin a fixed spec version.
 
