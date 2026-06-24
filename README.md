@@ -1,6 +1,6 @@
 # Enforcement Hearing Gateway (service)
 
-`service-cp-crime-caseingestion-enforcementgateway`
+`service-cp-crime-results-enforcementgateway`
 
 A Common Platform (CP) Spring Boot service that owns the **outbound integration from CP to the
 Libra/GoB enforcement system for court hearings**.
@@ -21,7 +21,7 @@ It is **event-driven**: it subscribes to CP listing public events (`public.listi
 > `cpp-context-staging-enforcement`; that context is unchanged for now and will be migrated
 > incrementally. Distinct from the GOB Resulting Workstream service, which owns results→GoB + NOWs.
 
-API contract: [`api-cp-crime-caseingestion-enforcementgateway`](https://github.com/hmcts/api-cp-crime-caseingestion-enforcementgateway).
+API contract: [`api-cp-crime-results-enforcementgateway`](https://github.com/hmcts/api-cp-crime-results-enforcementgateway).
 
 > ⚠️ **Scaffold.** Created from the HMCTS template
 > [`service-hmcts-crime-springboot-template`](https://github.com/hmcts/service-hmcts-crime-springboot-template).
