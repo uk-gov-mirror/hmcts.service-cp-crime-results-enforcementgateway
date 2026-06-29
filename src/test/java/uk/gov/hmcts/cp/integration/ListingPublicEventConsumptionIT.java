@@ -48,7 +48,7 @@ import uk.gov.hmcts.cp.messaging.ReceivedPublicEventSink;
  */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.NONE,
-        properties = "enforcementgateway.messaging.listener-enabled=true")
+        properties = "spring.jms.listener.auto-startup=true")
 class ListingPublicEventConsumptionIT {
 
     private static final JsonMapper MAPPER = new JsonMapper();

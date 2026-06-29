@@ -18,29 +18,33 @@ This POC answers **yes**, and pins down exactly how:
 | Topic | All public events flow through a single multicast topic — JMS destination `public.event` (`jms:topic:public.event`). |
 | Wire format | MSF `JsonEnvelope`: a `_metadata` object (carrying the event `name`) plus the payload. |
 | Event-name filter | The framework copies the event name onto the JMS string property **`CPPNAME`** (`DefaultEnvelopeConverter`). A broker-side message **selector** `CPPNAME IN ('public.listing.hearing-confirmed','public.listing.hearing-updated')` is all that's needed — non-matching events never reach the listener. |
-| Durable subscription | A durable topic subscriber needs a stable `clientId`; it must own its connection (Spring Boot's shared/cached `ConnectionFactory` rejects `setClientID`), so the gateway uses a dedicated `ActiveMQConnectionFactory`. |
+| Durable subscription | Configured **entirely through Spring Boot properties** — `spring.jms.client-id`, `spring.jms.subscription-durable=true`, `spring.jms.pub-sub-domain=true`. Boot applies the `clientId` at the connection-factory layer, so **no custom `ConnectionFactory` or container-factory bean is needed**. (Setting `clientId` on the *listener container* instead fails against Boot's shared/cached connection — `setClientID call not supported on proxy for shared Connection` — which is why the property route is the right one.) |
 | Auth | Local dev broker has security disabled / `admin`-`admin`; CP env grants the `amq` role create-durable-queue + consume on `public.event`. No MSF identity required. |
 
 ## How it's wired (POC scope)
 
-- `messaging/PublicEventJmsConfig` — a dedicated `ActiveMQConnectionFactory` (from `spring.artemis.*`) and a
-  `DefaultJmsListenerContainerFactory` with `pubSubDomain=true`, `subscriptionDurable=true`, a stable `clientId`,
-  and `autoStartup` gated by `enforcementgateway.messaging.listener-enabled` (default **off**, so the service and
-  the actuator test start without a broker).
-- `messaging/ListingPublicEventListener` — `@JmsListener` on `public.event` with the `CPPNAME` selector; parses
-  the `JsonEnvelope` and projects it to `ConfirmedHearingEvent`.
+There is **no custom JMS configuration class** — durable pub/sub is enabled purely by Spring Boot properties, so
+the only code is the listener and a test seam:
+
+- `messaging/ListingPublicEventListener` — a plain `@JmsListener` on `public.event` with the `CPPNAME` selector and
+  a durable `subscription` name; parses the `JsonEnvelope` and projects it to `ConfirmedHearingEvent`.
 - `messaging/ReceivedPublicEventSink` — POC seam recording consumed events for the test to assert on. In the real
   build this is replaced by the enforcement filter (by prosecuting authority) → enrichment → Libra `POST /confirmedHearing`.
 
 Config (`application.yaml`):
 
 ```yaml
+spring:
+  jms:
+    pub-sub-domain: true          # public.event is a multicast topic
+    subscription-durable: true    # durable: events queued while down are still delivered
+    client-id: service-cp-crime-results-enforcementgateway
+    listener:
+      auto-startup: ${ARTEMIS_LISTENER_ENABLED:false}   # OFF by default → service/actuator test need no broker
 enforcementgateway:
   messaging:
-    listener-enabled: ${ARTEMIS_LISTENER_ENABLED:false}
     public-event-topic: public.event
     subscription-name: service-cp-crime-results-enforcementgateway.public.event
-    client-id: service-cp-crime-results-enforcementgateway
     selector: "CPPNAME IN ('public.listing.hearing-confirmed','public.listing.hearing-updated')"
 ```
 
@@ -77,7 +81,8 @@ enforcementgateway:
 ## Resolved vs still-open (for the build)
 
 **Resolved:** topic name; envelope shape; the `CPPNAME` selector property + syntax; durable-subscriber wiring on
-Spring Boot 4 (dedicated `ActiveMQConnectionFactory` + `clientId`); that no MSF identity is required.
+Spring Boot 4 (pure `spring.jms.*` properties — `client-id` + `subscription-durable` + `pub-sub-domain`, no custom
+beans); that no MSF identity is required.
 
 **Still open (out of POC scope):**
 - **Durable-sub `clientId` uniqueness across replicas** — two pods sharing one `clientId`/subscription name will

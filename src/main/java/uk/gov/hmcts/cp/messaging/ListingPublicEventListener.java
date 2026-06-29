@@ -36,8 +36,7 @@ public class ListingPublicEventListener {
     @JmsListener(
             destination = "${enforcementgateway.messaging.public-event-topic}",
             subscription = "${enforcementgateway.messaging.subscription-name}",
-            selector = "${enforcementgateway.messaging.selector}",
-            containerFactory = "publicEventTopicFactory")
+            selector = "${enforcementgateway.messaging.selector}")
     public void onPublicEvent(final TextMessage message) throws JMSException {
         final String cppName = message.getStringProperty("CPPNAME");
         final ConfirmedHearingEvent event = parse(cppName, message.getText());
