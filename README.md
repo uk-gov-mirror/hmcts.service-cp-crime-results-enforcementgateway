@@ -25,9 +25,13 @@ API contract: [`api-cp-crime-results-enforcementgateway`](https://github.com/hmc
 
 > ⚠️ **Scaffold.** Created from the HMCTS template
 > [`service-hmcts-crime-springboot-template`](https://github.com/hmcts/service-hmcts-crime-springboot-template).
-> The domain implementation (event listener, enforcement filter, Libra client) is not yet built — a
-> platform spike to confirm Boot durable subscription to the CP Artemis `public.event` topic is a
-> prerequisite.
+> The domain implementation (enforcement filter, enrichment, Libra client) is not yet built.
+>
+> ✅ **Spike done.** The prerequisite — proving a Spring Boot service can durably subscribe to the CP
+> Artemis `public.event` topic and selector-filter listing events without the WildFly microservice
+> framework — is proven on branch `team/artemis-public-event-poc`. See
+> [`docs/artemis-public-event-poc.md`](docs/artemis-public-event-poc.md). Run it with
+> `./gradlew test --tests "*ListingPublicEventConsumptionIT"`.
 
 ## Tech stack
 

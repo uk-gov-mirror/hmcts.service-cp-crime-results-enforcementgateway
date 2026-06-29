@@ -1,0 +1,25 @@
+{
+  "_metadata": {
+    "name": "public.listing.hearing-confirmed",
+    "id": "11111111-1111-1111-1111-111111111111",
+    "correlation": { "client": "poc" },
+    "context": { "user": "poc" }
+  },
+  "confirmedHearing": {
+    "id": "4f9b9d2e-1111-4a22-9c33-aabbccddeeff",
+    "type": { "id": "0e9a7f00-3333-4c44-9d55-667788990011", "description": "Enforcement" },
+    "jurisdictionType": "MAGISTRATES",
+    "courtCentre": {
+      "id": "9c1d2b00-4444-4d55-8e66-778899aabbcc",
+      "name": "Leeds Magistrates' Court",
+      "code": "B01LY"
+    },
+    "hearingDays": [
+      { "sittingDay": "2026-07-01T09:30:00.000Z", "listingSequence": 1, "listedDurationMinutes": 30 }
+    ],
+    "prosecutionCases": [
+      { "id": "7a2c1f00-2222-4b33-8c44-112233445566", "isCivil": true, "defendants": [] }
+    ]
+  },
+  "sendNotificationToParties": false
+}

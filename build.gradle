@@ -49,4 +49,18 @@ dependencies {
   // Security: pin transitive tomcat-embed-core to patched version (CVE-2026-41293, -43512, et al.)
   // Brought in transitively via spring-boot-starter-web; >=11.0.0-M1,<11.0.22 are vulnerable
   implementation 'org.apache.tomcat.embed:tomcat-embed-core:11.0.23'
+
+  // --- Messaging: consume CP listing public events from the Artemis 'public.event' topic ---
+  // Spring Boot 4 brings jakarta.jms + artemis-jakarta-client transitively; version via the BOM.
+  implementation 'org.springframework.boot:spring-boot-starter-artemis'
+
+  // Embedded Artemis broker for the durable-topic consumption integration test (version via the BOM,
+  // so the embedded server always matches the BOM-managed client — no Artemis version drift).
+  testImplementation 'org.apache.activemq:artemis-jakarta-server'
+}
+
+// Guard against any legacy javax.jms slipping onto the classpath alongside Spring Boot 4's jakarta.jms.
+configurations.all {
+  exclude group: 'javax.jms', module: 'javax.jms-api'
+  exclude group: 'org.apache.activemq', module: 'artemis-jms-client'
 }
