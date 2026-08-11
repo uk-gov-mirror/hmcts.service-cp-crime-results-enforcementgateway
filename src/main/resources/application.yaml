@@ -66,22 +66,18 @@ cp:
     # same confirmedHearing payload on to Libra. TBC: draft/unconfirmed - the real APIM
     # endpoint for this integration isn't decided yet (CIMD-3701).
     base-url: ${LIBRA_BASE_URL:http://localhost:9999}
-    mutual-tls:
-      # cpp-context-staging-enforcement's equivalent Libra/APIM integration (GobClient calling
-      # APIM's CppGatewayService API) authenticates with a client certificate, not a header/API
-      # key - likely the same for this call. Disabled by default: no real cert/key confirmed yet
-      # for this endpoint. certificate/private-key are PEM strings (same "one continuous string,
-      # headers included" convention as that integration's Key-Vault-stored values).
-      enabled: ${LIBRA_MUTUAL_TLS_ENABLED:false}
-      client-certificate: ${LIBRA_MUTUAL_TLS_CLIENT_CERTIFICATE:}
-      client-private-key: ${LIBRA_MUTUAL_TLS_CLIENT_PRIVATE_KEY:}
+    # Same Ocp-Apim-Subscription-Key convention cpp-context-staging-dvla uses calling its own
+    # APIM-fronted integration - APIM itself authenticates onward to Libra (OAuth2, confirmed
+    # by the architect), so this is the only credential this service needs to send. Placeholder
+    # until the real subscription key is confirmed.
+    apim-subscription-key: ${LIBRA_APIM_SUBSCRIPTION_KEY:}
   enforcement:
     # Placeholder pending confirmation of the real prosecuting-authority refdata code for
     # Enforcement - change only this value once confirmed, not the lookup mechanism.
     authority-code: ${ENFORCEMENT_AUTHORITY_CODE:ENFRC}
   http-client:
-    # Applies to both the Progression and the Libra-via-APIM calls - placeholder values, no
-    # real SLA confirmed for either yet. Prevents a hung call from stalling the JMS listener
-    # thread indefinitely.
+    # Applies to the Progression call only - placeholder values, no real SLA confirmed yet.
+    # Prevents a hung call from stalling the JMS listener thread indefinitely. The Libra/APIM
+    # call deliberately has no custom timeout - see cp.libra above.
     connect-timeout-ms: ${HTTP_CLIENT_CONNECT_TIMEOUT_MS:5000}
     read-timeout-ms: ${HTTP_CLIENT_READ_TIMEOUT_MS:10000}
