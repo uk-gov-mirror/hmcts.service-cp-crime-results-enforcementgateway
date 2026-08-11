@@ -49,3 +49,39 @@ cp:
     public-event-topic: public.event
     subscription-name: service-cp-crime-results-enforcementgateway.public.event.logger
     selector: "CPPNAME IN ('public.listing.hearing-listed','public.listing.hearing-confirmed','public.listing.hearing-updated')"
+    # Separate durable subscription for the real business logic (hearing-listed deliberately
+    # excluded - not related to the Libra confirmedHearing flow).
+    hearing-allocation-subscription-name: service-cp-crime-results-enforcementgateway.hearing-allocation
+    hearing-allocation-selector: "CPPNAME IN ('public.listing.hearing-confirmed','public.listing.hearing-updated')"
+  progression:
+    query-api:
+      # TBC: replace with the real Progression query-api base URL for the target environment.
+      base-url: ${PROGRESSION_QUERY_API_URL:http://localhost:8080/progression-query-api/query/api/rest/progression}
+      # Same CJSCPPUID + Accept-vendor-header convention service-cp-crime-results-pcr already uses
+      # calling the sibling results-query-api/referencedata-query-api - no bearer token/API key
+      # involved. Placeholder system-user UUID until a real value is confirmed.
+      cjscppuid: ${CJSCPPUID:00000000-0000-0000-0000-000000000000}
+  libra:
+    # This service never calls Libra directly - it POSTs to Azure APIM, which forwards the
+    # same confirmedHearing payload on to Libra. TBC: draft/unconfirmed - the real APIM
+    # endpoint for this integration isn't decided yet (CIMD-3701).
+    base-url: ${LIBRA_BASE_URL:http://localhost:9999}
+    mutual-tls:
+      # cpp-context-staging-enforcement's equivalent Libra/APIM integration (GobClient calling
+      # APIM's CppGatewayService API) authenticates with a client certificate, not a header/API
+      # key - likely the same for this call. Disabled by default: no real cert/key confirmed yet
+      # for this endpoint. certificate/private-key are PEM strings (same "one continuous string,
+      # headers included" convention as that integration's Key-Vault-stored values).
+      enabled: ${LIBRA_MUTUAL_TLS_ENABLED:false}
+      client-certificate: ${LIBRA_MUTUAL_TLS_CLIENT_CERTIFICATE:}
+      client-private-key: ${LIBRA_MUTUAL_TLS_CLIENT_PRIVATE_KEY:}
+  enforcement:
+    # Placeholder pending confirmation of the real prosecuting-authority refdata code for
+    # Enforcement - change only this value once confirmed, not the lookup mechanism.
+    authority-code: ${ENFORCEMENT_AUTHORITY_CODE:ENFRC}
+  http-client:
+    # Applies to both the Progression and the Libra-via-APIM calls - placeholder values, no
+    # real SLA confirmed for either yet. Prevents a hung call from stalling the JMS listener
+    # thread indefinitely.
+    connect-timeout-ms: ${HTTP_CLIENT_CONNECT_TIMEOUT_MS:5000}
+    read-timeout-ms: ${HTTP_CLIENT_READ_TIMEOUT_MS:10000}
