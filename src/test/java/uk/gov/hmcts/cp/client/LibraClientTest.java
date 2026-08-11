@@ -13,6 +13,7 @@ import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.HttpStatus.ACCEPTED;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
@@ -20,6 +21,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 class LibraClientTest {
 
     private static final String BASE_URL = "http://libra.test";
+    private static final String APIM_SUBSCRIPTION_KEY = "test-subscription-key";
     private static final ConfirmedHearing CONFIRMED_HEARING =
             new ConfirmedHearing("12GD3456789", "B01LY", LocalDate.parse("2026-07-15"), "10:00");
 
@@ -30,9 +32,10 @@ class LibraClientTest {
         server.expect(requestTo(BASE_URL + "/confirmedHearing"))
                 .andExpect(method(POST))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(header("Ocp-Apim-Subscription-Key", APIM_SUBSCRIPTION_KEY))
                 .andRespond(withStatus(ACCEPTED));
 
-        final boolean accepted = new LibraClient(builder, BASE_URL).confirmHearing(CONFIRMED_HEARING);
+        final boolean accepted = new LibraClient(builder, BASE_URL, APIM_SUBSCRIPTION_KEY).confirmHearing(CONFIRMED_HEARING);
 
         assertThat(accepted).isTrue();
         server.verify();
@@ -44,7 +47,7 @@ class LibraClientTest {
         final MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         server.expect(requestTo(BASE_URL + "/confirmedHearing")).andRespond(withStatus(INTERNAL_SERVER_ERROR));
 
-        final boolean accepted = new LibraClient(builder, BASE_URL).confirmHearing(CONFIRMED_HEARING);
+        final boolean accepted = new LibraClient(builder, BASE_URL, APIM_SUBSCRIPTION_KEY).confirmHearing(CONFIRMED_HEARING);
 
         assertThat(accepted).isFalse();
     }

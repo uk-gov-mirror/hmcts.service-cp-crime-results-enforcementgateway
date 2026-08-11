@@ -11,22 +11,28 @@ import uk.gov.hmcts.cp.dto.ConfirmedHearing;
 
 /**
  * Sends the {@code confirmedHearing} payload to Azure APIM, which forwards the same payload on to
- * Libra - this service never calls Libra directly. The base URL is a placeholder pending the real
- * APIM endpoint - see {@code api-cp-crime-results-enforcementgateway}'s OpenAPI spec, which is
- * still explicitly draft/unreconciled with Libra. Uses {@code libraRestClientBuilder} (see
- * {@link uk.gov.hmcts.cp.config.RestClientConfig}), which can present a mutual-TLS client
- * certificate to APIM - the pattern already established by {@code cpp-context-staging-
- * enforcement}'s equivalent Libra/APIM integration - once a real certificate is confirmed.
+ * Libra - this service never calls Libra directly. Deliberately simple, matching
+ * {@code cpp-context-staging-dvla}'s equivalent outbound-to-APIM calls
+ * ({@code RestEasyClientService}/{@code DriverService}): a plain POST with an APIM subscription
+ * key, nothing else - no OAuth2/mTLS on this leg. APIM's own policy is responsible for
+ * authenticating onward to Libra (confirmed OAuth2, per the architect) exactly as DVLA's APIM
+ * policy authenticates onward to the real DVLA backend - that policy is owned by the APIM/platform
+ * team, not this service.
  */
 @Slf4j
 @Component
 public class LibraClient {
 
+    private static final String OCP_APIM_SUBSCRIPTION_KEY_HEADER = "Ocp-Apim-Subscription-Key";
+
     private final RestClient restClient;
+    private final String apimSubscriptionKey;
 
     public LibraClient(@Qualifier("libraRestClientBuilder") final RestClient.Builder restClientBuilder,
-                        @Value("${cp.libra.base-url}") final String baseUrl) {
+                        @Value("${cp.libra.base-url}") final String baseUrl,
+                        @Value("${cp.libra.apim-subscription-key}") final String apimSubscriptionKey) {
         this.restClient = restClientBuilder.baseUrl(baseUrl).build();
+        this.apimSubscriptionKey = apimSubscriptionKey;
     }
 
     /** Returns true if APIM accepted the callback (200/202) for onward delivery to Libra, false otherwise - never throws. */
@@ -35,6 +41,7 @@ public class LibraClient {
             restClient.post()
                     .uri("/confirmedHearing")
                     .contentType(MediaType.APPLICATION_JSON)
+                    .header(OCP_APIM_SUBSCRIPTION_KEY_HEADER, apimSubscriptionKey)
                     .body(confirmedHearing)
                     .retrieve()
                     .toBodilessEntity();

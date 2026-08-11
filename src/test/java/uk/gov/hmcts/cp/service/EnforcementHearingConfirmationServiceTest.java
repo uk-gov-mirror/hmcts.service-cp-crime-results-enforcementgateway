@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class EnforcementHearingConfirmationServiceTest {
 
-    private static final String ENFORCEMENT_AUTHORITY_CODE = "ENFRC";
+    private static final String ENFORCEMENT_AUTHORITY_CODE = "GAPGD00";
     // deliberately a GMT-period date (winter) so UTC and Europe/London coincide - keeps these
     // unrelated tests simple; BST conversion itself is verified separately below.
     private static final ZonedDateTime SITTING_DAY = ZonedDateTime.parse("2026-01-15T10:00:00Z");
