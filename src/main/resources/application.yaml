@@ -49,3 +49,36 @@ cp:
     public-event-topic: public.event
     subscription-name: service-cp-crime-results-enforcementgateway.public.event.logger
     selector: "CPPNAME IN ('public.listing.hearing-listed','public.listing.hearing-confirmed','public.listing.hearing-updated')"
+    # Separate durable subscription for the real business logic (hearing-listed deliberately
+    # excluded - not related to the Libra confirmedHearing flow).
+    hearing-allocation-subscription-name: service-cp-crime-results-enforcementgateway.hearing-allocation
+    hearing-allocation-selector: "CPPNAME IN ('public.listing.hearing-confirmed','public.listing.hearing-updated')"
+  progression:
+    query-api:
+      # TBC: replace with the real Progression query-api base URL for the target environment.
+      base-url: ${PROGRESSION_QUERY_API_URL:http://localhost:8080/progression-query-api/query/api/rest/progression}
+      # Same CJSCPPUID + Accept-vendor-header convention service-cp-crime-results-pcr already uses
+      # calling the sibling results-query-api/referencedata-query-api - no bearer token/API key
+      # involved. Placeholder system-user UUID until a real value is confirmed.
+      cjscppuid: ${CJSCPPUID:00000000-0000-0000-0000-000000000000}
+  libra:
+    # This service never calls Libra directly - it POSTs to Azure APIM, which forwards the
+    # same confirmedHearing payload on to Libra. TBC: draft/unconfirmed - the real APIM
+    # endpoint for this integration isn't decided yet (CIMD-3701).
+    base-url: ${LIBRA_BASE_URL:http://localhost:9999}
+    # Same Ocp-Apim-Subscription-Key convention cpp-context-staging-dvla uses calling its own
+    # APIM-fronted integration - APIM itself authenticates onward to Libra (OAuth2, confirmed
+    # by the architect), so this is the only credential this service needs to send. Placeholder
+    # until the real subscription key is confirmed.
+    apim-subscription-key: ${LIBRA_APIM_SUBSCRIPTION_KEY:}
+  enforcement:
+    # Confirmed by BA 2026-08-28: the Enforcement prosecuting-authority OUCODE, shared by both
+    # the "Enforcement" and "Enforcement (Auto)" rota business types (single-date vs date-range
+    # submissions use the same prosecuting authority).
+    authority-code: ${ENFORCEMENT_AUTHORITY_CODE:GAPGD00}
+  http-client:
+    # Applies to the Progression call only - placeholder values, no real SLA confirmed yet.
+    # Prevents a hung call from stalling the JMS listener thread indefinitely. The Libra/APIM
+    # call deliberately has no custom timeout - see cp.libra above.
+    connect-timeout-ms: ${HTTP_CLIENT_CONNECT_TIMEOUT_MS:5000}
+    read-timeout-ms: ${HTTP_CLIENT_READ_TIMEOUT_MS:10000}
